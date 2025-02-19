@@ -1,0 +1,63 @@
+# database/models.py
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, BigInteger
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+from datetime import datetime
+
+Base = declarative_base()
+
+class KnowledgeItem(Base):
+   __tablename__ = 'knowledge_items'
+
+   id = Column(Integer, primary_key=True)
+   category = Column(String(50))
+   title = Column(String(200))
+   content = Column(Text)
+   command = Column(String(50))
+   created_at = Column(DateTime, default=datetime.utcnow)
+   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class UserState(Base):
+   __tablename__ = 'user_states'
+
+   user_id = Column(BigInteger, primary_key=True)
+   current_context = Column(String(50))
+   last_command = Column(String(50))
+   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class UserAction(Base):
+   __tablename__ = 'user_actions'
+
+   id = Column(Integer, primary_key=True)
+   user_id = Column(BigInteger)
+   action_type = Column(String(50))  # message, command, knowledge_view
+   content = Column(Text, nullable=True)  # содержимое действия
+   created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ExerciseFeedback(Base):
+   __tablename__ = 'exercise_feedback'
+
+   id = Column(Integer, primary_key=True)
+   user_id = Column(BigInteger)
+   exercise_id = Column(String(50))
+   exercise_date = Column(DateTime)
+   feedback_date = Column(DateTime, default=datetime.utcnow)
+   feedback_text = Column(Text)
+   context = Column(Text)
+
+
+
+
+
+
+# Создание таблиц
+def init_db(database_url):
+   engine = create_engine(database_url)
+   Base.metadata.create_all(engine)
+   return engine
+
+# Создание сессии
+def get_session(engine):
+   Session = sessionmaker(bind=engine)
+   return Session()
