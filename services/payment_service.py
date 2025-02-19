@@ -9,8 +9,8 @@ from yookassa import Configuration, Payment
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 
-from backward_bot.database.models import UserCredits, PaymentHistory, UserSubscription
-from backward_bot.config.settings import (
+from database.models import UserCredits, PaymentHistory, UserSubscription
+from config.settings import (
     YOOKASSA_SHOP_ID,
     YOOKASSA_SECRET_KEY,
     BOT_USERNAME,

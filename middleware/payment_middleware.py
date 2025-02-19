@@ -6,9 +6,9 @@ from typing import Callable, Any
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from backward_bot.config.settings import PAYMENT_MESSAGES, CREDIT_SETTINGS
-from backward_bot.services.subscription_service import SubscriptionService
-from backward_bot.keyboards.payment_keyboard import PaymentKeyboards
+from config.settings import PAYMENT_MESSAGES, CREDIT_SETTINGS
+from services.subscription_service import SubscriptionService
+from keyboards.payment_keyboard import PaymentKeyboards
 
 logger = logging.getLogger(__name__)
 

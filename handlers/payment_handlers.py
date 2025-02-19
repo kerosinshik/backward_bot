@@ -3,11 +3,11 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from backward_bot.config.settings import PRICING_PLANS
-from backward_bot.services.payment_service import PaymentService
-from backward_bot.services.subscription_service import SubscriptionService
-from backward_bot.keyboards.payment_keyboard import PaymentKeyboards
-from backward_bot.database.models import UserCredits
+from config.settings import PRICING_PLANS
+from services.payment_service import PaymentService
+from services.subscription_service import SubscriptionService
+from keyboards.payment_keyboard import PaymentKeyboards
+from database.models import UserCredits
 
 logger = logging.getLogger(__name__)
 

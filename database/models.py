@@ -1,5 +1,5 @@
 # database/models.py
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, BigInteger
+from sqlalchemy import create_engine, Column, Integer, Float, String, Text, ForeignKey, DateTime, BigInteger, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime

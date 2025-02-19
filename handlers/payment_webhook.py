@@ -9,9 +9,9 @@ from typing import Dict, Any, Optional
 from aiohttp import web
 from datetime import datetime
 
-from backward_bot.config.settings import YOOKASSA_SECRET_KEY, PAYMENT_MESSAGES
-from backward_bot.services.payment_service import PaymentService
-from backward_bot.database.models import PaymentHistory
+from config.settings import YOOKASSA_SECRET_KEY, PAYMENT_MESSAGES
+from services.payment_service import PaymentService
+from database.models import PaymentHistory
 
 logger = logging.getLogger(__name__)
 

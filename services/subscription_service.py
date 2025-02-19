@@ -6,8 +6,8 @@ from typing import Optional, Dict, List
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 
-from backward_bot.database.models import UserSubscription, UserCredits
-from backward_bot.config.settings import PRICING_PLANS
+from database.models import UserSubscription, UserCredits
+from config.settings import PRICING_PLANS
 
 logger = logging.getLogger(__name__)
 

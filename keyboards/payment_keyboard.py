@@ -2,7 +2,7 @@
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from typing import List, Dict
-from backward_bot.config.settings import PRICING_PLANS
+from config.settings import PRICING_PLANS
 
 
 class PaymentKeyboards:

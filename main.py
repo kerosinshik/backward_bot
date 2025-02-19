@@ -15,12 +15,12 @@ from handlers.message_handlers import (
 )
 
 
-from backward_bot.handlers.admin_handlers import AdminCommands
-from backward_bot.handlers.payment_handlers import PaymentHandlers
-from backward_bot.services.analytics_service import AnalyticsService
-from backward_bot.services.telegram_report_service import TelegramReportService
-from backward_bot.services.payment_service import PaymentService
-from backward_bot.database.models import Base
+from handlers.admin_handlers import AdminCommands
+from handlers.payment_handlers import PaymentHandlers
+from services.analytics_service import AnalyticsService
+from services.telegram_report_service import TelegramReportService
+from services.payment_service import PaymentService
+from database.models import Base
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
