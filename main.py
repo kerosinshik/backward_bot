@@ -13,10 +13,14 @@ from handlers.message_handlers import (
     knowledge_command,
     principle_command
 )
-from handlers.admin_handlers import AdminCommands
-from services.analytics_service import AnalyticsService
-from services.telegram_report_service import TelegramReportService
-from database.models import Base
+
+
+from backward_bot.handlers.admin_handlers import AdminCommands
+from backward_bot.handlers.payment_handlers import PaymentHandlers
+from backward_bot.services.analytics_service import AnalyticsService
+from backward_bot.services.telegram_report_service import TelegramReportService
+from backward_bot.services.payment_service import PaymentService
+from backward_bot.database.models import Base
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -49,7 +53,11 @@ def setup_application() -> Application:
     # Инициализируем сервисы
     analytics_service = AnalyticsService(db_session)
     report_service = TelegramReportService(application.bot, analytics_service)
+    payment_service = PaymentService(db_session)
+
+    # Инициализируем обработчики
     admin_commands = AdminCommands(analytics_service, report_service)
+    payment_handlers = PaymentHandlers(payment_service)
 
     # Основные команды
     application.add_handler(CommandHandler("start", start_command))
@@ -79,6 +87,12 @@ def setup_application() -> Application:
             )
         )
 
+    
+    # Платежные команды
+    application.add_handler(CommandHandler("pricing", payment_handlers.show_pricing))
+    application.add_handler(CommandHandler("balance", payment_handlers.show_balance))
+
+
     # Админские команды
     admin_command_list = ["stats", "daily", "weekly", "users", "errors", "feedbacks", "export_feedbacks"]
     application.add_handler(
@@ -89,7 +103,14 @@ def setup_application() -> Application:
         )
     )
 
+
     # Callback запросы
+    application.add_handler(
+        CallbackQueryHandler(
+            payment_handlers.handle_payment_callback,
+            pattern="^(select_plan:|demo_payment_success|cancel_payment)"
+        )
+    )
     application.add_handler(
         CallbackQueryHandler(
             admin_commands.handle_admin_callback,
@@ -97,6 +118,9 @@ def setup_application() -> Application:
         )
     )
     application.add_handler(CallbackQueryHandler(handle_callback_query))
+
+
+
 
     # Текстовые сообщения
     application.add_handler(

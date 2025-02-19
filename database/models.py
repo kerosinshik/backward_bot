@@ -46,6 +46,60 @@ class ExerciseFeedback(Base):
    feedback_text = Column(Text)
    context = Column(Text)
 
+
+class UserCredits(Base):
+   """Модель для хранения кредитов пользователя"""
+   __tablename__ = 'user_credits'
+
+   user_id = Column(Integer, primary_key=True)
+   credits_remaining = Column(Integer, default=0)
+   has_used_trial = Column(Boolean, default=False)
+   last_purchase_date = Column(DateTime, default=datetime.utcnow)
+   created_at = Column(DateTime, default=datetime.utcnow)
+   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PaymentHistory(Base):
+   """Модель для хранения истории платежей"""
+   __tablename__ = 'payment_history'
+
+   id = Column(Integer, primary_key=True)
+   user_id = Column(Integer, nullable=False)
+   payment_id = Column(String(50), unique=True, nullable=False)
+   amount = Column(Float, nullable=False)
+   plan_id = Column(String(20), nullable=False)
+   status = Column(String(20), nullable=False)  # pending, succeeded, canceled, error
+   created_at = Column(DateTime, default=datetime.utcnow)
+   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+
+class UserSubscription(Base):
+   """Модель для хранения подписок пользователей"""
+   __tablename__ = 'user_subscriptions'
+
+   id = Column(Integer, primary_key=True)
+   user_id = Column(Integer, nullable=False)
+   plan_id = Column(String(20), nullable=False)
+   status = Column(String(20), nullable=False)  # active, expired, canceled
+   start_date = Column(DateTime, nullable=False)
+   end_date = Column(DateTime, nullable=True)
+   created_at = Column(DateTime, default=datetime.utcnow)
+   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+   @property
+   def is_active(self):
+      """Проверяет, активна ли подписка"""
+      now = datetime.utcnow()
+      return (
+              self.status == 'active' and
+              self.start_date <= now and
+              (self.end_date is None or self.end_date > now)
+      )
+
+
+
+
 # Создание таблиц
 def init_db(database_url):
    engine = create_engine(database_url)
