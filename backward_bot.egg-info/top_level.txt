@@ -2,4 +2,6 @@ analytics
 config
 database
 handlers
+keyboards
+middleware
 services
