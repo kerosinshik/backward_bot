@@ -1,42 +1,87 @@
 # handlers/admin_handlers.py
-
-from datetime import datetime, timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from config.settings import ADMIN_USERS
-from services.analytics_service import AnalyticsService
-from services.telegram_report_service import TelegramReportService
 import logging
-from database.models import ExerciseFeedback
+from datetime import datetime, timedelta
+from typing import List, Dict, Any
+
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes, CallbackContext
+
+from config.settings import (
+    ADMIN_USERS,
+    ANONYMIZATION_SETTINGS,
+    ANALYTICS_SETTINGS
+)
+from services.analytics_service import AnalyticsService
+from services.user_history_service import UserHistoryService
+from services.telegram_report_service import TelegramReportService
 
 logger = logging.getLogger(__name__)
 
-async def verify_admin(user_id: int) -> bool:
-    """Проверка прав администратора"""
-    return user_id in ADMIN_USERS
 
 class AdminCommands:
-    """Класс для обработки административных команд"""
+    """Класс для обработки административных команд с учетом конфиденциальности"""
 
-    def __init__(self, analytics_service: AnalyticsService, report_service: TelegramReportService):
+    def __init__(
+            self,
+            analytics_service: AnalyticsService,
+            report_service: TelegramReportService,
+            user_history_service: UserHistoryService
+    ):
+        """
+        Инициализация административных команд
+
+        Args:
+            analytics_service: Сервис аналитики
+            report_service: Сервис telegram-репортов
+            user_history_service: Сервис истории пользователей
+        """
         self.analytics = analytics_service
         self.report_service = report_service
+        self.user_history = user_history_service
+
+        # Настройки конфиденциальности
+        self.pseudonymize = ANONYMIZATION_SETTINGS.get(
+            'enable_pseudonymization',
+            True
+        )
 
     async def verify_admin(self, user_id: int) -> bool:
-        """Проверка прав администратора"""
+        """
+        Проверка прав администратора
+
+        Args:
+            user_id: ID пользователя
+
+        Returns:
+            bool: Является ли пользователь администратором
+        """
         return user_id in ADMIN_USERS
 
-    async def handle_admin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обработчик административных команд"""
+    async def handle_admin_command(
+            self,
+            update: Update,
+            context: ContextTypes.DEFAULT_TYPE
+    ):
+        """
+        Обработчик административных команд с учетом конфиденциальности
+
+        Args:
+            update: Входящее обновление
+            context: Контекст выполнения
+        """
         if not update.effective_user:
             return
 
         user_id = update.effective_user.id
 
+        # Проверка прав администратора
         if not await self.verify_admin(user_id):
-            await update.message.reply_text("У вас нет прав для выполнения этой команды.")
+            await update.message.reply_text(
+                "У вас нет прав для выполнения этой команды."
+            )
             return
 
+        # Получаем команду
         command = update.message.text.split()[0].lower()
 
         try:
@@ -50,16 +95,28 @@ class AdminCommands:
                 await self.send_users_stats(update)
             elif command == '/errors':
                 await self.send_error_stats(update)
-            elif command == '/feedbacks':  # Добавляем новую команду
-                await self.handle_feedbacks_command(update, context)
-            elif command == '/export_feedbacks':
-                await self.handle_feedbacks_export(update, context)
+            elif command == '/privacy_stats':
+                await self.send_privacy_stats(update)
+
         except Exception as e:
-            await update.message.reply_text(f"Ошибка при выполнении команды: {str(e)}")
+            logger.error(f"Error in admin command {command}: {e}")
+            await update.message.reply_text(
+                f"Произошла ошибка при выполнении команды: {str(e)}"
+            )
 
     async def send_general_stats(self, update: Update):
-        """Отправка общей статистики"""
-        stats = self.analytics.get_daily_stats()  # Получаем статистику за текущий день
+        """
+        Отправка общей статистики с учетом конфиденциальности
+
+        Args:
+            update: Входящее обновление
+        """
+        logger.info("Entering send_general_stats method")
+        # Получаем статистику за текущий день
+        stats = self.analytics.get_daily_stats()
+
+        logger.info(f"Obtained stats: {stats}")
+
         total_users = stats['users']['total_unique']
         total_actions = stats['engagement']['total_actions']
 
@@ -67,57 +124,73 @@ class AdminCommands:
             "📊 *ОБЩАЯ СТАТИСТИКА*\n",
             f"👥 *Пользователи*: {total_users}",
             f"📝 *Действия*: {total_actions}",
-            f"🎯 *Упражнения начато*: {stats['exercises']['total_started']}",
-            f"✅ *Упражнения завершено*: {stats['exercises']['total_completed']}",
-            f"\n🔄 *Конверсия упражнений*: {stats['exercises'].get('completion_rate', 0):.1f}%"
+            "\n*Настройки конфиденциальности*:",
+            f"• Псевдонимизация: {'Включена' if self.pseudonymize else 'Выключена'}"
         ]
 
-        await update.message.reply_text("\n".join(message), parse_mode='Markdown')
+        await update.message.reply_text(
+            "\n".join(message),
+            parse_mode='Markdown'
+        )
 
     async def send_daily_stats(self, update: Update):
-        """Отправка ежедневной статистики"""
+        """
+        Отправка ежедневной статистики
+
+        Args:
+            update: Входящее обновление
+        """
+        # Получаем статистику
         stats = self.analytics.get_daily_stats()
-        await self.report_service.send_daily_report(stats)
-        await update.message.reply_text("Ежедневный отчет сформирован и отправлен в канал статистики.")
+
+        # Отправляем отчет через сервис репортов
+        await self.report_service.send_daily_report(stats=stats)
+
+        await update.message.reply_text(
+            "Ежедневный отчет сформирован и отправлен в канал статистики."
+        )
 
     async def send_weekly_stats(self, update: Update):
-        """Отправка еженедельной статистики"""
+        """
+        Отправка еженедельной статистики
+
+        Args:
+            update: Входящее обновление
+        """
+        # Вычисляем период
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=7)
 
+        # Получаем агрегированную статистику
+        weekly_stats = self.report_service._aggregate_weekly_stats(start_date, end_date)
+
+        # Формируем сообщение
         message = [
             f"📊 *СТАТИСТИКА ЗА НЕДЕЛЮ*\n",
-            f"Период: {start_date.strftime('%Y-%m-%d')} - {end_date.strftime('%Y-%m-%d')}\n"
+            f"Период: {start_date.strftime('%Y-%m-%d')} - {end_date.strftime('%Y-%m-%d')}\n",
+            f"👥 *Всего пользователей*: {weekly_stats['total_users']}",
+            f"📝 *Всего действий*: {weekly_stats['total_actions']}",
+            f"📊 *Новых пользователей*: {weekly_stats['new_users']}",
+            f"🔄 *Активных пользователей*: {weekly_stats['active_users']}"
         ]
 
-        weekly_totals = {
-            'users': 0,
-            'actions': 0,
-            'exercises_started': 0,
-            'exercises_completed': 0
-        }
+        # Отправляем отчет через сервис репортов
+        await self.report_service.send_weekly_report(stats=weekly_stats)
 
-        # Собираем статистику по дням
-        current_date = start_date
-        while current_date <= end_date:
-            daily_stats = self.analytics.get_daily_stats(current_date)
-            weekly_totals['users'] += daily_stats['users']['total_unique']
-            weekly_totals['actions'] += daily_stats['engagement']['total_actions']
-            weekly_totals['exercises_started'] += daily_stats['exercises']['total_started']
-            weekly_totals['exercises_completed'] += daily_stats['exercises']['total_completed']
-            current_date += timedelta(days=1)
-
-        message.extend([
-            f"👥 *Всего пользователей*: {weekly_totals['users']}",
-            f"📝 *Всего действий*: {weekly_totals['actions']}",
-            f"🎯 *Упражнений начато*: {weekly_totals['exercises_started']}",
-            f"✅ *Упражнений завершено*: {weekly_totals['exercises_completed']}"
-        ])
-
-        await update.message.reply_text("\n".join(message), parse_mode='Markdown')
+        # Отправляем summary в чат администратора
+        await update.message.reply_text(
+            "\n".join(message),
+            parse_mode='Markdown'
+        )
 
     async def send_users_stats(self, update: Update):
-        """Отправка статистики по пользователям"""
+        """
+        Отправка статистики по пользователям
+
+        Args:
+            update: Входящее обновление
+        """
+        # Получаем статистику
         stats = self.analytics.get_daily_stats()
 
         message = [
@@ -128,43 +201,124 @@ class AdminCommands:
             f"• Вернувшихся: {stats['users']['returning_users']}",
             f"• Активных: {stats['users']['active_users']}\n",
             "*Активность*:",
-            f"• Среднее количество действий: {stats['engagement']['total_actions'] / max(stats['users']['total_unique'], 1):.1f}",
-            "\n*Популярные разделы*:"
+            f"• Среднее количество действий: {stats['engagement']['total_actions'] / max(stats['users']['total_unique'], 1):.1f}"
         ]
 
-        for section, count in stats['content'].get('knowledge_base_views', {}).items():
-            message.append(f"• {section}: {count}")
-
-        await update.message.reply_text("\n".join(message), parse_mode='Markdown')
+        await update.message.reply_text(
+            "\n".join(message),
+            parse_mode='Markdown'
+        )
 
     async def send_error_stats(self, update: Update):
-        """Отправка статистики ошибок"""
+        """
+        Отправка статистики ошибок
+
+        Args:
+            update: Входящее обновление
+        """
+        # Получаем статистику
         stats = self.analytics.get_daily_stats()
 
         message = [
             "⚠️ *СТАТИСТИКА ОШИБОК*\n",
             f"• Всего ошибок: {stats['errors']['total_errors']}",
-            f"• Частота ошибок: {stats['errors'].get('error_rate', 0):.2f}%\n",
-            "*Типы ошибок*:"
+            f"• Частота ошибок: {stats['errors'].get('error_rate', 0):.2f}%"
         ]
 
-        for error_type, count in stats['errors'].get('error_types', {}).items():
-            message.append(f"• {error_type}: {count}")
+        # Добавляем типы ошибок
+        if stats['errors'].get('error_types'):
+            message.append("\n*Типы ошибок*:")
+            for error_type, count in stats['errors']['error_types'].items():
+                message.append(f"• {error_type}: {count}")
 
-        await update.message.reply_text("\n".join(message), parse_mode='Markdown')
+        await update.message.reply_text(
+            "\n".join(message),
+            parse_mode='Markdown'
+        )
 
-    async def handle_admin_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обработчик callback-запросов от админских кнопок"""
+    async def send_privacy_stats(self, update: Update):
+        """
+        Отправка статистики по конфиденциальности
+
+        Args:
+            update: Входящее обновление
+        """
+        # Получаем статистику управления данными
+        try:
+            # Используем сервис истории пользователей
+            privacy_stats = await self.user_history.get_data_retention_statistics()
+
+            message = [
+                "🔒 *СТАТИСТИКА КОНФИДЕНЦИАЛЬНОСТИ*\n",
+                f"*Настройки*:",
+                f"• Псевдонимизация: {'Включена' if self.pseudonymize else 'Выключена'}",
+                f"• Максимальная длина контекста: {ANALYTICS_SETTINGS.get('max_context_messages', 30)} сообщений\n",
+                "*Управление данными*:",
+                f"• Всего операций очистки: {privacy_stats.get('total_operations', 0)}",
+                f"• Всего затронутых записей: {privacy_stats.get('total_records_affected', 0)}"
+            ]
+
+            # Добавляем статистику по типам операций
+            if privacy_stats.get('operations_by_type'):
+                message.append("\n*Типы операций*:")
+                for op_type, data in privacy_stats['operations_by_type'].items():
+                    message.append(
+                        f"• {op_type}: "
+                        f"{data.get('count', 0)} операций, "
+                        f"{data.get('records_affected', 0)} записей"
+                    )
+
+            # Информация за последний месяц
+            last_month = privacy_stats.get('last_30_days', {})
+            message.extend([
+                "\n*За последние 30 дней*:",
+                f"• Операций: {last_month.get('operations', 0)}",
+                f"• Удалено записей: {last_month.get('records_affected', 0)}"
+            ])
+
+            # Последняя операция
+            if privacy_stats.get('last_operation_date'):
+                message.append(
+                    f"\n*Последняя операция*: {privacy_stats['last_operation_date']}"
+                )
+
+            await update.message.reply_text(
+                "\n".join(message),
+                parse_mode='Markdown'
+            )
+
+        except Exception as e:
+            logger.error(f"Error getting privacy stats: {e}")
+            await update.message.reply_text(
+                "Не удалось получить статистику конфиденциальности."
+            )
+
+    async def handle_admin_callback(
+            self,
+            update: Update,
+            context: ContextTypes.DEFAULT_TYPE
+    ):
+        """
+        Обработчик callback-запросов от администраторов
+
+        Args:
+            update: Входящее обновление
+            context: Контекст выполнения
+        """
         query = update.callback_query
         await query.answer()
 
+        # Проверяем права администратора
         if not await self.verify_admin(query.from_user.id):
-            await query.message.reply_text("У вас нет прав для выполнения этой команды.")
+            await query.message.reply_text(
+                "У вас нет прав для выполнения этой команды."
+            )
             return
 
-        callback_data = query.data
-
         try:
+            # Обработка различных callback-запросов
+            callback_data = query.data
+
             if callback_data == "admin_stats_daily":
                 await self.send_daily_stats(update)
             elif callback_data == "admin_stats_weekly":
@@ -173,95 +327,11 @@ class AdminCommands:
                 await self.send_users_stats(update)
             elif callback_data == "admin_stats_errors":
                 await self.send_error_stats(update)
-        except Exception as e:
-            await query.message.reply_text(f"Ошибка при обработке запроса: {str(e)}")
-
-    async def handle_feedbacks_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обработчик команды /feedbacks"""
-        try:
-            session = context.bot_data['db_session']
-            feedbacks = session.query(ExerciseFeedback).order_by(ExerciseFeedback.feedback_date.desc()).all()
-
-            if not feedbacks:
-                await update.message.reply_text("Пока нет отзывов об упражнениях.")
-                return
-
-            response = "📝 Последние отзывы об упражнениях:\n\n"
-            for fb in feedbacks:
-                # Получаем информацию о пользователе
-                try:
-                    user = await context.bot.get_chat(fb.user_id)
-                    user_info = f"@{user.username}" if user.username else f"id: {fb.user_id}"
-                    user_name = user.full_name
-                except Exception:
-                    user_info = f"id: {fb.user_id}"
-                    user_name = "Неизвестный пользователь"
-
-                response += f"Дата: {fb.feedback_date.strftime('%Y-%m-%d %H:%M')}\n"
-                response += f"Пользователь: {user_name} ({user_info})\n"
-                response += f"Упражнение: {fb.exercise_id}\n"
-                response += f"Отзыв: {fb.feedback_text}\n"
-                response += "-" * 20 + "\n"
-
-            await update.message.reply_text(response)
+            elif callback_data == "admin_stats_privacy":
+                await self.send_privacy_stats(update)
 
         except Exception as e:
-            logger.error(f"Error getting feedbacks: {e}")
-            await update.message.reply_text("Произошла ошибка при получении отзывов.")
-
-    async def handle_feedbacks_export(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обработчик команды /export_feedbacks"""
-        try:
-            session = context.bot_data['db_session']
-            feedbacks = session.query(ExerciseFeedback).order_by(ExerciseFeedback.feedback_date.desc()).all()
-
-            if not feedbacks:
-                await update.message.reply_text("Пока нет отзывов для выгрузки.")
-                return
-
-            # Создаем CSV в памяти
-            import io
-            import csv
-            from datetime import datetime
-
-            output = io.StringIO()
-            writer = csv.writer(output, delimiter=';', quotechar='"')
-
-            # Записываем заголовки
-            writer.writerow(['Дата', 'User ID', 'Username', 'Имя', 'Упражнение', 'Отзыв', 'Контекст'])
-
-            # Записываем данные
-            for fb in feedbacks:
-                try:
-                    user = await context.bot.get_chat(fb.user_id)
-                    username = f"@{user.username}" if user.username else "Нет"
-                    user_name = user.full_name
-                except Exception:
-                    username = "Недоступен"
-                    user_name = "Неизвестный пользователь"
-
-                writer.writerow([
-                    fb.feedback_date.strftime('%Y-%m-%d %H:%M'),
-                    fb.user_id,
-                    username,
-                    user_name,
-                    fb.exercise_id,
-                    fb.feedback_text,
-                    fb.context
-                ])
-
-            # Создаем файл для отправки
-            output.seek(0)
-            filename = f"feedbacks_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-
-            # Отправляем файл
-            await update.message.reply_document(
-                document=io.BytesIO(output.getvalue().encode('utf-8-sig')),
-                # utf-8-sig для корректного отображения в Excel
-                filename=filename,
-                caption="Выгрузка отзывов об упражнениях"
+            logger.error(f"Error in admin callback: {e}")
+            await query.message.reply_text(
+                f"Произошла ошибка при обработке запроса: {str(e)}"
             )
-
-        except Exception as e:
-            logger.error(f"Error exporting feedbacks: {e}")
-            await update.message.reply_text("Произошла ошибка при выгрузке отзывов.")
