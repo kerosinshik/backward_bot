@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="backward_bot",
-    version="0.1",
-    packages=find_packages(),
+    name='backward_bot',
+    version='0.1',
+    packages=find_packages(),  # Ищет все пакеты без дополнительных параметров
     install_requires=[
         'python-telegram-bot==20.7',
         'anthropic==0.45.0',
@@ -14,7 +14,8 @@ setup(
         'alembic==1.13.1',
         'psycopg2-binary==2.9.9',
         'python-jose==3.3.0',
+        'yookassa==3.0.0',
         'httpx==0.25.2',
         'pytz'
-    ],
+    ]
 )
