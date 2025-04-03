@@ -24,7 +24,12 @@ class ClaudeService:
         self.max_context_messages = DIALOGUE_SETTINGS.get('max_context_messages', 30)
         self.max_tokens_per_context = DIALOGUE_SETTINGS.get('max_tokens_per_context', 4000)
 
-    def get_consultation(self, user_id: int, user_message: str) -> str:
+    def get_consultation(
+            self,
+            user_id: int,
+            user_message: str,
+            context_messages: Optional[List[Dict[str, Any]]] = None
+        ) -> str:
         try:
             # Проверяем длину сообщения
             if len(user_message) > MAX_INPUT_CHARS:
@@ -34,11 +39,13 @@ class ClaudeService:
             # Получаем pseudonym_id
             pseudonym_id = self.encryption_service.ensure_pseudonym(user_id)
 
-            # Получаем контекст диалога
-            context_messages = self.encryption_service.get_messages_by_pseudonym(
-                pseudonym_id,
-                limit=self.max_context_messages
-            )
+
+            # Если контекст не передан, получаем из базы
+            if context_messages is None:
+                context_messages = self.encryption_service.get_messages_by_pseudonym(
+                    pseudonym_id,
+                    limit=self.max_context_messages
+                )
 
             # ВАЖНОЕ ИСПРАВЛЕНИЕ: меняем порядок сообщений на хронологический
             # Так как они по умолчанию отсортированы от новых к старым

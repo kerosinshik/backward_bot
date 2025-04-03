@@ -188,6 +188,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Логируем начало консультации
         await log_user_action(context, user_id, 'consultation_start', None)
 
+        context_messages = []
+
         response = claude_service.get_consultation(user_id, message_text)
 
         # Списываем кредит за использование
