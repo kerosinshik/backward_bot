@@ -12,6 +12,7 @@ from database.models import UserAction, DialogueMetadata, DialogueContent
 from services.encryption_service import EncryptionService
 from sqlalchemy.orm import Session
 import logging
+from typing import List, Dict, Any, Optional 
 from datetime import datetime, timedelta
 
 
