@@ -46,6 +46,12 @@ class ClaudeService:
 
             # Добавляем лог для отладки
             logging.info(f"Retrieved {len(context_messages)} context messages for user {user_id}")
+            logging.info(f"Context messages: {context_messages}")
+        except Exception as e:
+            logging.error(f"Error retrieving context: {e}")
+            return "Извините, произошла ошибка при обработке контекста."
+
+
 
             # Подготавливаем сообщения для Claude
             claude_messages = []

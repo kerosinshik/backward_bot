@@ -151,13 +151,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if message_text == "💰 Баланс":
         await log_user_action(context, user_id, 'menu_action', 'balance')
-        from backward_bot.handlers.payment_menu_handlers import handle_balance_command
+        from handlers.payment_menu_handlers import handle_balance_command
         await handle_balance_command(update, context)
         return
 
     if message_text == "💼 Тарифы":
         await log_user_action(context, user_id, 'menu_action', 'pricing')
-        from backward_bot.handlers.payment_menu_handlers import handle_pricing_command
+        from handlers.payment_menu_handlers import handle_pricing_command
         await handle_pricing_command(update, context)
         return
 
@@ -326,7 +326,7 @@ async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def privacy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /privacy"""
     # Импортируем напрямую, без относительного импорта
-    from backward_bot.config.privacy_policy import PRIVACY_POLICY
+    from config.privacy_policy import PRIVACY_POLICY
 
     user_id = update.effective_user.id
     await log_user_action(context, user_id, 'command', '/privacy')
@@ -357,7 +357,7 @@ async def privacy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Privacy command handler called")
 
     # Импортируем напрямую, без относительного импорта
-    from backward_bot.config.privacy_policy import PRIVACY_POLICY
+    from config.privacy_policy import PRIVACY_POLICY
 
     user_id = update.effective_user.id
     logger.info(f"Processing privacy command for user {user_id}")
@@ -517,8 +517,8 @@ async def handle_data_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
 
     try:
         # Получаем сервисы
-        from backward_bot.services.data_retention_service import DataRetentionService
-        from backward_bot.services.encryption_service import EncryptionService
+        from services.data_retention_service import DataRetentionService
+        from services.encryption_service import EncryptionService
 
         session = context.bot_data['db_session']
         encryption_service = EncryptionService(session)

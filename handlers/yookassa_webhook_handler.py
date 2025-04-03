@@ -180,7 +180,7 @@ class YooKassaWebhookHandler:
 
             # Формируем сообщение в зависимости от типа события
             if event == 'payment.succeeded':
-                from backward_bot.config.settings import PRICING_PLANS
+                from config.settings import PRICING_PLANS
                 plan = PRICING_PLANS.get(plan_id, {})
                 plan_name = plan.get('name', 'Неизвестный')
                 messages_count = plan.get('messages', 0)
