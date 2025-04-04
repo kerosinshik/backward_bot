@@ -89,12 +89,16 @@ class ClaudeService:
                 return self._handle_api_error(error_details)
 
             # Проверяем, что ответ содержит контент
-            if not response.content or len(response.content) == 0:
+            if not response or not hasattr(response, 'content') or not response.content:
                 self._log_action(user_id, "error", "Empty API response")
                 return "Не удалось получить ответ. Пожалуйста, попробуйте еще раз."
 
             # Извлекаем текст из ответа
-            response_text = response.content[0].text
+            if len(response.content) > 0 and hasattr(response.content[0], 'text'):
+                response_text = response.content[0].text
+            else:
+                self._log_action(user_id, "error", "Invalid response format")
+                return "Получен некорректный формат ответа. Пожалуйста, попробуйте еще раз."
 
             # Проверяем длину ответа
             if len(response_text) > MAX_OUTPUT_CHARS:
