@@ -122,8 +122,7 @@ class PaymentWebhookHandler:
         except Exception as e:
             logger.error(f"Error processing notification: {e}")
 
-    async def _handle_successful_payment(self, payment_id: str, user_id: int,
-                                         payment_data: Dict[str, Any]):
+    async def _handle_successful_payment(self, payment_id: str, user_id: int, payment_data: Dict[str, Any]):
         """
         Обрабатывает успешный платеж
 
@@ -135,6 +134,32 @@ class PaymentWebhookHandler:
         try:
             # Обновляем статус платежа
             await self.payment_service.process_successful_payment(payment_id)
+
+            # Получаем метаданные платежа для извлечения plan_id
+            metadata = payment_data.get('metadata', {})
+            plan_id = metadata.get('plan_id')
+
+            # Если plan_id отсутствует в метаданных, пытаемся найти его в БД
+            if not plan_id:
+                payment_record = self.payment_service.session.query(PaymentHistory).filter_by(
+                    payment_id=payment_id).first()
+                if payment_record and payment_record.plan_id:
+                    plan_id = payment_record.plan_id
+                    logger.info(f"Found plan_id {plan_id} in database for payment {payment_id}")
+                else:
+                    logger.error(f"Cannot find plan_id for payment {payment_id}")
+                    return
+
+            # Активируем подписку и начисляем кредиты
+            logger.info(f"Activating subscription for user {user_id}, plan {plan_id}")
+
+            # Активируем подписку - это ключевая часть, которую нужно добавить
+            subscription_result = self.payment_service.activate_subscription(user_id, plan_id, payment_id)
+
+            if subscription_result:
+                logger.info(f"Successfully activated subscription for user {user_id}, plan {plan_id}")
+            else:
+                logger.error(f"Failed to activate subscription for user {user_id}, plan {plan_id}")
 
             # Отправляем уведомление пользователю
             amount = payment_data.get('amount', {}).get('value', '0')
@@ -150,7 +175,7 @@ class PaymentWebhookHandler:
             )
 
         except Exception as e:
-            logger.error(f"Error handling successful payment: {e}")
+            logger.error(f"Error handling successful payment: {e}", exc_info=True)
 
     async def _handle_canceled_payment(self, payment_id: str, user_id: int):
         """
