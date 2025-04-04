@@ -12,7 +12,7 @@ from database.models import UserAction, DialogueMetadata, DialogueContent
 from services.encryption_service import EncryptionService
 from sqlalchemy.orm import Session
 import logging
-from typing import List, Dict, Any, Optional 
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
 
@@ -25,12 +25,7 @@ class ClaudeService:
         self.max_context_messages = DIALOGUE_SETTINGS.get('max_context_messages', 30)
         self.max_tokens_per_context = DIALOGUE_SETTINGS.get('max_tokens_per_context', 4000)
 
-    def get_consultation(
-            self,
-            user_id: int,
-            user_message: str,
-            context_messages: Optional[List[Dict[str, Any]]] = None
-        ) -> str:
+    def get_consultation(self, user_id: int, user_message: str) -> str:
         try:
             # Проверяем длину сообщения
             if len(user_message) > MAX_INPUT_CHARS:
@@ -40,13 +35,16 @@ class ClaudeService:
             # Получаем pseudonym_id
             pseudonym_id = self.encryption_service.ensure_pseudonym(user_id)
 
+            # Получаем контекст диалога
+            context_messages = self.encryption_service.get_messages_by_pseudonym(
+                pseudonym_id,
+                limit=self.max_context_messages
+            )
 
-            # Если контекст не передан, получаем из базы
+            # Создаем пустой список, если context_messages равен None
             if context_messages is None:
-                context_messages = self.encryption_service.get_messages_by_pseudonym(
-                    pseudonym_id,
-                    limit=self.max_context_messages
-                )
+                context_messages = []
+                logging.warning(f"Context messages is None for user {user_id}, using empty list")
 
             # ВАЖНОЕ ИСПРАВЛЕНИЕ: меняем порядок сообщений на хронологический
             # Так как они по умолчанию отсортированы от новых к старым
@@ -55,11 +53,6 @@ class ClaudeService:
             # Добавляем лог для отладки
             logging.info(f"Retrieved {len(context_messages)} context messages for user {user_id}")
             logging.info(f"Context messages: {context_messages}")
-        except Exception as e:
-            logging.error(f"Error retrieving context: {e}")
-            return "Извините, произошла ошибка при обработке контекста."
-
-
 
             # Подготавливаем сообщения для Claude
             claude_messages = []
@@ -117,6 +110,7 @@ class ClaudeService:
             self._log_action(user_id, "unexpected_error", str(unexpected_error)[:100])
             return "Извините, произошла непредвиденная ошибка. Пожалуйста, попробуйте позже."
 
+        
     def _save_dialogue_messages(self, pseudonym_id: str, user_message: str, bot_response: str):
         """Сохранение диалога с шифрованием и правильными ролями"""
         try:
