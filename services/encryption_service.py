@@ -62,18 +62,14 @@ class EncryptionService:
             self.encrypt_messages = False
 
     def ensure_pseudonym(self, user_id: int) -> str:
-        """
-        Получение или создание псевдонима для пользователя
-
-        Args:
-            user_id: ID пользователя
-
-        Returns:
-            Псевдоним пользователя
-        """
+        logging.info(f"ДИАГНОСТИКА: ensure_pseudonym для user_id={user_id}")
         try:
             # Проверяем, включена ли псевдонимизация
-            if not ANONYMIZATION_SETTINGS.get('enable_pseudonymization', True):
+            is_pseudonymization_enabled = ANONYMIZATION_SETTINGS.get('enable_pseudonymization', True)
+            logging.info(f"ДИАГНОСТИКА: псевдонимизация включена: {is_pseudonymization_enabled}")
+
+            if not is_pseudonymization_enabled:
+                logging.info(f"ДИАГНОСТИКА: псевдонимизация отключена, возвращаем user_id={user_id}")
                 return str(user_id)
 
             # Ищем существующий псевдоним
@@ -83,18 +79,22 @@ class EncryptionService:
 
             # Создаем новый, если не существует
             if not pseudonym:
+                logging.info(f"ДИАГНОСТИКА: псевдоним не найден для user_id={user_id}, создаем новый")
                 new_pseudonym = UserPseudonym(
                     user_id=user_id,
                     pseudonym_id=str(uuid.uuid4())
                 )
                 self.session.add(new_pseudonym)
                 self.session.commit()
+                logging.info(f"ДИАГНОСТИКА: создан новый pseudonym_id={new_pseudonym.pseudonym_id}")
                 return new_pseudonym.pseudonym_id
 
+            logging.info(f"ДИАГНОСТИКА: найден существующий pseudonym_id={pseudonym.pseudonym_id}")
             return pseudonym.pseudonym_id
 
         except Exception as e:
             logger.error(f"Error ensuring pseudonym: {e}")
+            logging.info(f"ДИАГНОСТИКА: ошибка в ensure_pseudonym, возвращаем str(user_id)={str(user_id)}")
             return str(user_id)
 
     def _derive_encryption_key(self, pseudonym_id: str) -> bytes:
@@ -196,6 +196,7 @@ class EncryptionService:
             message: str,
             pseudonym_id: str
     ) -> Optional[str]:
+
         """
         Шифрование сообщения
 
@@ -302,6 +303,8 @@ class EncryptionService:
         """
         Получение сообщений для псевдонима с расшифровкой
 
+        logging.info(f"ДИАГНОСТИКА: запрос сообщений для pseudonym_id={pseudonym_id}")
+
         Args:
             pseudonym_id: Псевдоним пользователя
             start_date: Начало периода (опционально)
@@ -381,6 +384,7 @@ class EncryptionService:
                     # Пропускаем проблемные сообщения, но продолжаем обработку остальных
 
             logging.info(f"Returning {len(decrypted_messages)} processed messages")
+            logging.info(f"ДИАГНОСТИКА: возвращаем {len(decrypted_messages)} сообщений")
             return decrypted_messages
 
         except Exception as e:

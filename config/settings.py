@@ -33,7 +33,7 @@ DATA_RETENTION = {
 
 # Настройки анонимизации
 ANONYMIZATION_SETTINGS = {
-    'enable_pseudonymization': os.getenv("ENABLE_PSEUDONYMIZATION", "True").lower() == "false",  # Включить псевдонимизацию
+    'enable_pseudonymization': os.getenv("ENABLE_PSEUDONYMIZATION", "True").lower() == "true",  # Включить псевдонимизацию
     'hash_user_ids_in_logs': os.getenv("HASH_USER_IDS_IN_LOGS", "True").lower() == "true",  # Хешировать ID пользователей в логах
     'enable_data_masking': os.getenv("ENABLE_DATA_MASKING", "True").lower() == "true",  # Включить маскирование данных
 }
