@@ -228,7 +228,7 @@ BOT_USERNAME = os.getenv("BOT_USERNAME", "your_bot_username")
 PAYMENT_RETURN_URL = f"https://t.me/{BOT_USERNAME}"
 
 # Настройки webhook
-WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8080"))
+WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8081"))
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook/yookassa")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", f"https://your-domain.com{WEBHOOK_PATH}")
