@@ -12,6 +12,8 @@ load_dotenv(BASE_DIR / ".env")
 # Токены и ключи API
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_API_VERSION = os.getenv("ANTHROPIC_API_VERSION", "2023-06-01")  # Версия API Anthropic
+ANTHROPIC_BETA_FEATURES = os.getenv("ANTHROPIC_BETA_FEATURES", "").split(",") if os.getenv("ANTHROPIC_BETA_FEATURES") else []  # Бета-функции
 
 # Настройки шифрования и безопасности
 ENCRYPTION_MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY")  # Мастер-ключ для шифрования
@@ -82,6 +84,21 @@ MAX_INPUT_TOKENS = int(os.getenv("MAX_INPUT_TOKENS", "500"))
 MAX_OUTPUT_TOKENS = int(os.getenv("MAX_OUTPUT_TOKENS", "1000"))
 SYSTEM_PROMPT_TOKENS = int(os.getenv("SYSTEM_PROMPT_TOKENS", "100"))
 
+# Дополнительные настройки Claude API
+CLAUDE_TEMPERATURE = float(os.getenv("CLAUDE_TEMPERATURE", "0.7"))  # Температура генерации (0-1)
+CLAUDE_TOP_P = float(os.getenv("CLAUDE_TOP_P", "0.9"))  # Параметр nucleus sampling
+CLAUDE_TOP_K = int(os.getenv("CLAUDE_TOP_K", "40"))  # Ограничение выбора токенов
+CLAUDE_STOP_SEQUENCES = os.getenv("CLAUDE_STOP_SEQUENCES", "").split(",") if os.getenv("CLAUDE_STOP_SEQUENCES") else []  # Последовательности остановки
+CLAUDE_STREAM_ENABLED = os.getenv("CLAUDE_STREAM_ENABLED", "False").lower() == "true"  # Потоковая передача ответов
+CLAUDE_THINKING_ENABLED = os.getenv("CLAUDE_THINKING_ENABLED", "False").lower() == "true"  # Режим расширенного мышления
+CLAUDE_THINKING_MIN_TOKENS = int(os.getenv("CLAUDE_THINKING_MIN_TOKENS", "1024"))  # Минимальный бюджет токенов для мышления
+ENABLE_IMAGE_PROCESSING = os.getenv("ENABLE_IMAGE_PROCESSING", "False").lower() == "true"  # Мультимодальные возможности
+ENABLE_REQUEST_METADATA = os.getenv("ENABLE_REQUEST_METADATA", "True").lower() == "true"  # Включение метаданных запросов
+
+# Настройки инструментов (tools) для Claude API
+CLAUDE_TOOLS_ENABLED = os.getenv("CLAUDE_TOOLS_ENABLED", "False").lower() == "true"  # Включить поддержку инструментов
+CLAUDE_TOOL_CHOICE = os.getenv("CLAUDE_TOOL_CHOICE", "auto")  # auto, any, tool, none
+
 # Ограничения на длину сообщений
 MAX_INPUT_CHARS = int(os.getenv("MAX_INPUT_CHARS", "2500"))
 MAX_OUTPUT_CHARS = int(os.getenv("MAX_OUTPUT_CHARS", "3500"))
@@ -125,9 +142,9 @@ SYSTEM_PROMPT = """Ты - опытный консультант, глубоко 
 WELCOME_MESSAGE = """Здравствуйте! Я консультант по методу "обратного движения".
 
 Этот метод помогает находить неочевидные решения через:
-• Поиск возможностей там, где другие видят препятствия
-• Умение адаптироваться, сохраняя суть
-• Нестандартный подход к ситуациям
+- Поиск возможностей там, где другие видят препятствия
+- Умение адаптироваться, сохраняя суть
+- Нестандартный подход к ситуациям
 
 Чем могу помочь?
 
@@ -159,9 +176,6 @@ ERROR_MESSAGES = {
     'service_unavailable': "Сервис временно недоступен. Пожалуйста, попробуйте позже."
 }
 
-
-
-
 # Настройки ЮKassa
 YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID")
 YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY")
@@ -171,92 +185,6 @@ BOT_USERNAME = os.getenv("BOT_USERNAME", "your_bot_username")
 PAYMENT_RETURN_URL = f"https://t.me/{BOT_USERNAME}"
 
 # Настройки тарифных планов
-PRICING_PLANS = {
-    'trial': {
-        'name': 'Пробный',
-        'price': 0,
-        'messages': 20,
-        'features': [
-            'Без срока действия',
-            'Базовые консультации',
-            'Доступ к базе знаний',
-            'Базовые упражнения'
-        ]
-    },
-    'basic': {
-        'name': 'Базовый',
-        'price': 290,
-        'messages': 100,
-        'features': [
-            'Без срока действия',
-            'Полные консультации',
-            'Полный доступ к базе знаний',
-            'Базовая поддержка'
-        ]
-    },
-    'standard': {
-        'name': 'Стандарт',
-        'price': 690,
-        'messages': 300,
-        'features': [
-            'Без срока действия',
-            'Приоритетные консультации',
-            'Расширенная база знаний',
-            'Приоритетная поддержка'
-        ]
-    }
-}
-
-# Настройки системы кредитов
-CREDIT_SETTINGS = {
-    'message_cost': 1,  # Стоимость одного сообщения в кредитах
-    'min_credits_warning': 5,  # Порог для предупреждения о малом количестве кредитов
-    'trial_credits': 20,  # Количество кредитов в пробном тарифе
-}
-
-# Настройки ЮKassa
-YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID")
-YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY")
-
-# URL для возврата после оплаты
-BOT_USERNAME = os.getenv("BOT_USERNAME", "your_bot_username")
-PAYMENT_RETURN_URL = f"https://t.me/{BOT_USERNAME}"
-
-# Настройки webhook
-WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8081"))
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")
-WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook/yookassa")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", f"https://your-domain.com{WEBHOOK_PATH}")
-WEBHOOK_LISTEN = os.getenv("WEBHOOK_LISTEN", "127.0.0.1")
-
-
-# Настройки платежной системы
-PAYMENT_SETTINGS = {
-    'currency': 'RUB',
-    'payment_timeout': 3600,  # Время жизни платежа в секундах
-    'retry_interval': 300,  # Интервал между попытками проверки статуса платежа
-    'max_retries': 5,  # Максимальное количество попыток проверки статуса
-}
-
-# Системные сообщения для платежей
-PAYMENT_MESSAGES = {
-    'payment_success': "✅ Оплата успешно произведена! Ваши кредиты уже доступны.",
-    'payment_pending': "⏳ Ожидание подтверждения оплаты...",
-    'payment_cancelled': "❌ Оплата отменена. Вы можете попробовать снова или выбрать другой тариф.",
-    'payment_error': "⚠️ Произошла ошибка при обработке платежа. Пожалуйста, попробуйте позже.",
-    'low_credits': "⚠️ У вас осталось мало кредитов. Пожалуйста, пополните баланс для продолжения работы.",
-    'no_credits': "❌ У вас закончились кредиты. Пожалуйста, пополните баланс для продолжения работы."
-}
-
-# Настройки возврата средств
-REFUND_SETTINGS = {
-    'allowed_period': 24 * 3600,  # Период, в течение которого возможен возврат (24 часа)
-    'min_amount': 100,  # Минимальная сумма для возврата
-    'reason_required': True  # Требуется ли указание причины возврата
-}
-
-
-# Настройки тарифных планов в settings.py
 PRICING_PLANS = {
     'trial': {
         'name': 'Пробный',
@@ -302,3 +230,42 @@ PRICING_PLANS = {
         ]
     }
 }
+
+# Настройки системы кредитов
+CREDIT_SETTINGS = {
+    'message_cost': 1,  # Стоимость одного сообщения в кредитах
+    'min_credits_warning': 5,  # Порог для предупреждения о малом количестве кредитов
+    'trial_credits': 20,  # Количество кредитов в пробном тарифе
+}
+
+# Настройки платежной системы
+PAYMENT_SETTINGS = {
+    'currency': 'RUB',
+    'payment_timeout': 3600,  # Время жизни платежа в секундах
+    'retry_interval': 300,  # Интервал между попытками проверки статуса платежа
+    'max_retries': 5,  # Максимальное количество попыток проверки статуса
+}
+
+# Системные сообщения для платежей
+PAYMENT_MESSAGES = {
+    'payment_success': "✅ Оплата успешно произведена! Ваши кредиты уже доступны.",
+    'payment_pending': "⏳ Ожидание подтверждения оплаты...",
+    'payment_cancelled': "❌ Оплата отменена. Вы можете попробовать снова или выбрать другой тариф.",
+    'payment_error': "⚠️ Произошла ошибка при обработке платежа. Пожалуйста, попробуйте позже.",
+    'low_credits': "⚠️ У вас осталось мало кредитов. Пожалуйста, пополните баланс для продолжения работы.",
+    'no_credits': "❌ У вас закончились кредиты. Пожалуйста, пополните баланс для продолжения работы."
+}
+
+# Настройки возврата средств
+REFUND_SETTINGS = {
+    'allowed_period': 24 * 3600,  # Период, в течение которого возможен возврат (24 часа)
+    'min_amount': 100,  # Минимальная сумма для возврата
+    'reason_required': True  # Требуется ли указание причины возврата
+}
+
+# Настройки webhook
+WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8081"))
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")
+WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook/yookassa")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", f"https://your-domain.com{WEBHOOK_PATH}")
+WEBHOOK_LISTEN = os.getenv("WEBHOOK_LISTEN", "127.0.0.1")
