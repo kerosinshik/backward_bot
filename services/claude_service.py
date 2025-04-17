@@ -1,36 +1,30 @@
 # services/claude_service.py
 import anthropic
-from config.settings import (
-    ANTHROPIC_API_KEY,
-    SYSTEM_PROMPT,
-    MAX_OUTPUT_TOKENS,
-    DIALOGUE_SETTINGS,
-    MAX_INPUT_CHARS,
-    MAX_OUTPUT_CHARS
-)
-from database.models import UserAction, DialogueMetadata, DialogueContent
-from services.encryption_service import EncryptionService
-from sqlalchemy.orm import Session
+from config import settings
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+
+from database.models import UserAction, DialogueMetadata, DialogueContent
+from services.encryption_service import EncryptionService
 
 
 class ClaudeService:
     def __init__(self, session: Session):
         self.session = session
         self.encryption_service = EncryptionService(session)
-        self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        self.max_tokens = MAX_OUTPUT_TOKENS
-        self.max_context_messages = DIALOGUE_SETTINGS.get('max_context_messages', 30)
-        self.max_tokens_per_context = DIALOGUE_SETTINGS.get('max_tokens_per_context', 4000)
+        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.max_tokens = settings.MAX_OUTPUT_TOKENS
+        self.max_context_messages = settings.DIALOGUE_SETTINGS.get('max_context_messages', 30)
+        self.max_tokens_per_context = settings.DIALOGUE_SETTINGS.get('max_tokens_per_context', 4000)
 
     def get_consultation(self, user_id: int, user_message: str) -> str:
         try:
             # Проверяем длину сообщения
-            if len(user_message) > MAX_INPUT_CHARS:
+            if len(user_message) > settings.MAX_INPUT_CHARS:
                 self._log_action(user_id, "error", "Message too long")
-                return f"Пожалуйста, сократите сообщение до {MAX_INPUT_CHARS} символов."
+                return f"Пожалуйста, сократите сообщение до {settings.MAX_INPUT_CHARS} символов."
 
             # Получаем pseudonym_id
             pseudonym_id = self.encryption_service.ensure_pseudonym(user_id)
@@ -67,14 +61,44 @@ class ClaudeService:
             # Добавляем текущее сообщение пользователя
             claude_messages.append({"role": "user", "content": user_message})
 
-            # Отправляем запрос в Claude
+            # Отправляем запрос в Claude с динамическими параметрами
             try:
-                response = self.client.messages.create(
-                    model="claude-3-haiku-20240307",
-                    system=SYSTEM_PROMPT,
-                    messages=claude_messages,
-                    max_tokens=self.max_tokens
-                )
+                # Добавляем отладочные сообщения
+                logging.info("=== DEBUG: Starting Claude API request ===")
+                logging.info(f"Using model: {getattr(settings, 'CLAUDE_MODEL', 'claude-3-haiku-20240307')}")
+                logging.info(f"System prompt length: {len(settings.SYSTEM_PROMPT)}")
+                logging.info(f"Thinking enabled: {getattr(settings, 'CLAUDE_THINKING_ENABLED', False)}")
+                logging.info(f"Temperature: {getattr(settings, 'CLAUDE_TEMPERATURE', 'not set')}")
+                logging.info(f"Top P: {getattr(settings, 'CLAUDE_TOP_P', 'not set')}")
+                logging.info(f"Max tokens: {self.max_tokens}")
+
+                # Создаем словарь параметров API
+                api_params = {
+                    "model": getattr(settings, 'CLAUDE_MODEL', "claude-3-haiku-20240307"),
+                    "system": settings.SYSTEM_PROMPT,
+                    "messages": claude_messages,
+                    "max_tokens": self.max_tokens
+                }
+
+                # Добавляем дополнительные параметры
+                if hasattr(settings, 'CLAUDE_TEMPERATURE'):
+                    api_params["temperature"] = settings.CLAUDE_TEMPERATURE
+                if hasattr(settings, 'CLAUDE_TOP_P'):
+                    api_params["top_p"] = settings.CLAUDE_TOP_P
+
+                # Включаем режим thinking, если он включен
+                thinking_enabled = getattr(settings, 'CLAUDE_THINKING_ENABLED', False)
+                if thinking_enabled:
+                    api_params["anthropic_metadata"] = {"thinking": True}
+
+                # Логируем итоговые параметры запроса (без содержимого сообщений)
+                log_params = api_params.copy()
+                log_params["messages"] = f"[{len(claude_messages)} messages]"
+                logging.info(f"API parameters: {log_params}")
+
+                # Вызываем API
+                response = self.client.messages.create(**api_params)
+
             except Exception as api_error:
                 error_details = str(api_error)
                 logging.error(f"Claude API error for user {user_id}: {error_details}")
@@ -94,8 +118,8 @@ class ClaudeService:
                 return "Получен некорректный формат ответа. Пожалуйста, попробуйте еще раз."
 
             # Проверяем длину ответа
-            if len(response_text) > MAX_OUTPUT_CHARS:
-                response_text = response_text[:MAX_OUTPUT_CHARS] + "..."
+            if len(response_text) > settings.MAX_OUTPUT_CHARS:
+                response_text = response_text[:settings.MAX_OUTPUT_CHARS] + "..."
 
             # Шифруем и сохраняем сообщения пользователя и бота
             self._save_dialogue_messages(pseudonym_id, user_message, response_text)
@@ -118,7 +142,7 @@ class ClaudeService:
 
             # 1. Сохраняем сообщение пользователя с ролью 'user'
             user_content_str = user_message
-            if self.encryption_service.encrypt_messages:
+            if settings.DIALOGUE_SETTINGS.get('encrypt_messages', True):
                 user_content_str = self.encryption_service.encrypt_message(user_message, pseudonym_id)
 
             user_content = DialogueContent(
@@ -140,7 +164,7 @@ class ClaudeService:
 
             # 2. Сохраняем ответ бота с ролью 'assistant'
             bot_content_str = bot_response
-            if self.encryption_service.encrypt_messages:
+            if settings.DIALOGUE_SETTINGS.get('encrypt_messages', True):
                 bot_content_str = self.encryption_service.encrypt_message(bot_response, pseudonym_id)
 
             bot_content = DialogueContent(
@@ -200,7 +224,7 @@ class ClaudeService:
 
             # Находим и удаляем старые сообщения
             cutoff_date = datetime.utcnow() - timedelta(
-                days=DIALOGUE_SETTINGS.get('context_retention_days', 90)
+                days=settings.DIALOGUE_SETTINGS.get('context_retention_days', 90)
             )
 
             deleted_count = self.encryption_service.delete_messages({
