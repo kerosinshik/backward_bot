@@ -81,11 +81,11 @@ ANALYTICS_SETTINGS = {
 # Модель и настройки Claude
 CLAUDE_MODEL = "claude-3-7-sonnet-20250219"
 MAX_INPUT_TOKENS = int(os.getenv("MAX_INPUT_TOKENS", "500"))
-MAX_OUTPUT_TOKENS = int(os.getenv("MAX_OUTPUT_TOKENS", "1000"))
+MAX_OUTPUT_TOKENS = int(os.getenv("MAX_OUTPUT_TOKENS", "700"))
 SYSTEM_PROMPT_TOKENS = int(os.getenv("SYSTEM_PROMPT_TOKENS", "100"))
 
 # Дополнительные настройки Claude API
-CLAUDE_TEMPERATURE = float(os.getenv("CLAUDE_TEMPERATURE", "0.9"))  # Температура генерации (0-1)
+CLAUDE_TEMPERATURE = float(os.getenv("CLAUDE_TEMPERATURE", "0.8"))  # Температура генерации (0-1)
 CLAUDE_TOP_P = float(os.getenv("CLAUDE_TOP_P", "0.98"))  # Параметр nucleus sampling
 CLAUDE_TOP_K = int(os.getenv("CLAUDE_TOP_K", "40"))  # Ограничение выбора токенов
 CLAUDE_STOP_SEQUENCES = os.getenv("CLAUDE_STOP_SEQUENCES", "").split(",") if os.getenv("CLAUDE_STOP_SEQUENCES") else []  # Последовательности остановки
