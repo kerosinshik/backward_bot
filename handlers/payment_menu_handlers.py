@@ -117,14 +117,6 @@ async def handle_pricing_command(update: Update, context: ContextTypes.DEFAULT_T
         message.append(f"• {feature}")
     message.append("")
 
-    # Добавляем описание тестового тарифа
-    message.append(f"🧪 *{test_plan.get('name', 'Тестовый')}*")
-    message.append(f"• Сообщений: {test_plan.get('messages', 5)}")
-    message.append(f"• Стоимость: {test_plan.get('price', 10)}₽")
-    for feature in test_plan.get('features', []):
-        message.append(f"• {feature}")
-    message.append("")
-
     # Добавляем описание тарифа Базовый
     message.append(f"💫 *{basic_plan.get('name', 'Базовый')}*")
     message.append(f"• Сообщений: {basic_plan.get('messages', 100)}")
@@ -143,7 +135,6 @@ async def handle_pricing_command(update: Update, context: ContextTypes.DEFAULT_T
     # Клавиатура с кнопками выбора тарифа
     keyboard = [
         [InlineKeyboardButton("🎁 Пробный (Бесплатно)", callback_data="select_plan:trial")],
-        [InlineKeyboardButton(f"🧪 Тестовый ({test_plan.get('price', 10)}₽)", callback_data="select_plan:test")],
         [InlineKeyboardButton(f"💫 Базовый ({basic_plan.get('price', 290)}₽)", callback_data="select_plan:basic")],
         [InlineKeyboardButton(f"⭐️ Стандарт ({standard_plan.get('price', 690)}₽)", callback_data="select_plan:standard")]
     ]
@@ -221,7 +212,6 @@ async def handle_show_tariffs(query, context):
     """Показывает меню выбора тарифов"""
     # Получаем информацию о текущих тарифах
     trial_plan = PRICING_PLANS.get('trial', {})
-    test_plan = PRICING_PLANS.get('test', {})  # Добавляем тестовый тариф
     basic_plan = PRICING_PLANS.get('basic', {})
     standard_plan = PRICING_PLANS.get('standard', {})
 
@@ -236,11 +226,6 @@ async def handle_show_tariffs(query, context):
     message.append(f"• Сообщений: {trial_plan.get('messages', 20)}")
     message.append(f"• Стоимость: Бесплатно\n")
 
-    # Добавляем описание тестового тарифа
-    message.append(f"🧪 *{test_plan.get('name', 'Тестовый')}*")
-    message.append(f"• Сообщений: {test_plan.get('messages', 5)}")
-    message.append(f"• Стоимость: {test_plan.get('price', 10)}₽\n")
-
     message.append(f"💫 *{basic_plan.get('name', 'Базовый')}*")
     message.append(f"• Сообщений: {basic_plan.get('messages', 100)}")
     message.append(f"• Стоимость: {basic_plan.get('price', 290)}₽\n")
@@ -252,7 +237,6 @@ async def handle_show_tariffs(query, context):
     # Клавиатура с кнопками выбора тарифа
     keyboard = [
         [InlineKeyboardButton("🎁 Пробный (Бесплатно)", callback_data="select_plan:trial")],
-        [InlineKeyboardButton(f"🧪 Тестовый ({test_plan.get('price', 10)}₽)", callback_data="select_plan:test")],
         [InlineKeyboardButton(f"💫 Базовый ({basic_plan.get('price', 290)}₽)", callback_data="select_plan:basic")],
         [InlineKeyboardButton(f"⭐️ Стандарт ({standard_plan.get('price', 690)}₽)",
                               callback_data="select_plan:standard")]
