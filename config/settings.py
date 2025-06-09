@@ -154,7 +154,27 @@ WELCOME_MESSAGE = """👋 Привет! Я ИИ-консультант по ме
 – «Проект не двигается — не понимаю, что не так»
 – «Есть тревога, но не могу найти её источник»
 
-Готов начать? Опиши свою ситуацию."""
+Готов начать? Опиши свою ситуацию.
+
+---
+
+👋 Hi! I’m an AI consultant based on the “Backward’s Method”.
+
+If you feel stuck — with an idea, a decision, or in life — I can help you see an unexpected way forward.
+
+🔄 How it works:
+1. You tell me what’s going on
+2. I ask clarifying questions
+3. Then offer a fresh perspective and possible moves
+
+🧭 People usually come with things like:
+– “I’m not sure if I should change jobs”
+– “My project isn’t moving — something feels off”
+– “I feel anxious, but can’t name the reason”
+
+💬 You can talk to me in English, but please note: most system messages are still in Russian (for now).
+
+Ready to begin? Just describe your situation."""
 
 
 
